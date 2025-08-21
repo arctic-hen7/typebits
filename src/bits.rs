@@ -14,6 +14,10 @@ mod sealed {
     pub trait SealedBit {}
     impl SealedBit for B1 {}
     impl SealedBit for B0 {}
+
+    pub trait SealedBitstring {}
+    impl<B: super::Bit> SealedBitstring for B {}
+    impl<H: super::Bitstring, B: super::Bit> SealedBitstring for super::Tape<H, B> {}
 }
 
 /// A trait for single bits, implemented by [`B0`] and [`B1`] only. This trait is sealed to prevent
@@ -54,9 +58,8 @@ impl Bit for B0 {
 }
 
 /// A trait for bitstrings of arbitrary length. This is implemented for any [`Bit`] and
-/// [`Tape<H, B>`]. Though it is not sealed, it generally shouldn't be implemented by external
-/// types.
-pub trait Bitstring: byte_conditionals::IsB0 {
+/// [`Tape<H, B>`].
+pub trait Bitstring: byte_conditionals::IsB0 + sealed::SealedBitstring {
     /// The head of the bitstring, which is itself another bitstring.
     type Head: Bitstring;
     /// The least-significant bit of the bitstring.
