@@ -30,6 +30,8 @@ pub trait Bit: sealed::SealedBit {
     /// Returns the `NOT` of this bit.
     type Not: Bit;
 
+    const UNSIGNED: usize;
+
     /// Returns an internal representation of the boolean value arising from this bit. This is used
     /// internally for type-level conditionals, and generally shouldn't be interacted with by
     /// library users.
@@ -43,6 +45,8 @@ impl Bit for B1 {
     type Or<Other: Bit> = B1;
     type Not = B0;
 
+    const UNSIGNED: usize = 1;
+
     type Bool = byte_conditionals::True;
 
     const RENDER: &'static str = "1";
@@ -51,6 +55,8 @@ impl Bit for B0 {
     type And<Other: Bit> = B0;
     type Or<Other: Bit> = Other;
     type Not = B1;
+
+    const UNSIGNED: usize = 0;
 
     type Bool = byte_conditionals::False;
 
@@ -64,6 +70,8 @@ pub trait Bitstring: byte_conditionals::IsB0 + sealed::SealedBitstring {
     type Head: Bitstring;
     /// The least-significant bit of the bitstring.
     type Lsb: Bit;
+
+    const UNSIGNED: usize;
 
     /// A "trimmed" version of this bitstring, which will have no leading zeroes.
     type Trimmed: Bitstring;
@@ -97,6 +105,8 @@ impl<H: Bitstring, B: Bit> Bitstring for Tape<H, B> {
     type Head = H;
     type Lsb = B;
 
+    const UNSIGNED: usize = H::UNSIGNED * 2 + B::UNSIGNED;
+
     // If the trimmed head is zero, then this is the final bit, so we should return just that.
     // Otherwise, return a tape with the trimmed head and this bit. This evaluates recursively.
     type Trimmed = byte_conditionals::SimpleIf<IsB0<H::Trimmed>, B, Tape<H::Trimmed, B>>;
@@ -115,6 +125,8 @@ impl<H: Bitstring, B: Bit> Bitstring for Tape<H, B> {
 impl<B: Bit> Bitstring for B {
     type Head = B0; // A single bit can be interpreted as a two-bit tape with leading bit 0
     type Lsb = B;
+
+    const UNSIGNED: usize = B::UNSIGNED;
 
     type Trimmed = B;
 
@@ -225,4 +237,7 @@ fn bitstrings() {
     assert_eq!(And::<T10, T101>::render(), "0");
     assert_eq!(Or::<T101, T10>::render(), "111");
     assert_eq!(And::<T101, T10>::render(), "0");
+
+    type T910 = crate::bs!(1, 1, 1, 0, 0, 0, 1, 1, 1, 0);
+    assert_eq!(T910::UNSIGNED, 910);
 }
