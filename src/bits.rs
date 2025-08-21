@@ -142,7 +142,7 @@ pub type IsB0<B /*: Bytes*/> = <B as byte_conditionals::IsB0>::IsB0;
 /// this crate for an example.
 pub type IfB0<B /*: Bytes*/, T, F> = byte_conditionals::If<IsB0<B>, T, F>;
 
-pub(crate) use byte_conditionals::{Lazy, Thunk};
+pub use byte_conditionals::{Boolean, False, If, Lazy, SimpleIf, Thunk, True};
 
 mod byte_conditionals {
     use super::*;
@@ -205,10 +205,10 @@ mod byte_conditionals {
 
     /// A type-level conditional, where the condition implements [`Boolean`] and the branches
     /// implement [`Lazy`].
-    pub(super) type If<Cond, T, F> = <<Cond as Boolean>::Select<T, F> as Lazy>::Output;
+    pub type If<Cond, T, F> = <<Cond as Boolean>::Select<T, F> as Lazy>::Output;
     /// A simple conditional that wraps both its branches in [`Thunk`]s. This should be used when
     /// you don't have recursion.
-    pub(super) type SimpleIf<Cond, T, F> = If<Cond, Thunk<T>, Thunk<F>>;
+    pub type SimpleIf<Cond, T, F> = If<Cond, Thunk<T>, Thunk<F>>;
 }
 
 #[test]
