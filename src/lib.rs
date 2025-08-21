@@ -14,5 +14,5 @@ pub use gates::*;
 /// inputs/outputs, meaning you need to have a new one for each scenario. A macro may in future
 /// provide this, but for now, this may be useful in bitstring-specific cases.
 pub mod conditionals {
-    pub use crate::bits::{Boolean, False, If, IfB0, Lazy, SimpleIf, Thunk, True};
+    pub use crate::bits::{Boolean, False, If, IfB0, IsB0, Lazy, SimpleIf, Thunk, True};
 }
