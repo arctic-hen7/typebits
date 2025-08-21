@@ -16,3 +16,29 @@ pub use gates::*;
 pub mod conditionals {
     pub use crate::bits::{Boolean, False, If, IfB0, IsB0, Lazy, SimpleIf, Thunk, True};
 }
+
+/// Convenience macro for constructing tapes of bits. This accepts syntax like `bin!(1, 0, 1)` to
+/// produce `Tape<Tape<B1, B0>, B1>`.
+#[macro_export]
+macro_rules! bitstring {
+    // Public entry: at least two bits
+    ($first:tt, $second:tt $(, $rest:tt)* $(,)?) => {
+        bin!(@acc $crate::Tape<bin!(@bit $first), bin!(@bit $second)> $(, $rest)*)
+    };
+    // Allow a single bit (returns just B0/B1)
+    ($only:tt) => { bin!(@bit $only) };
+
+    // Accumulator (internal)
+    (@acc $acc:ty, $next:tt $(, $rest:tt)*) => {
+        bin!(@acc $crate::Tape<$acc, bin!(@bit $next)> $(, $rest)*)
+    };
+    (@acc $acc:ty) => { $acc };
+
+    // Normalize bit tokens
+    (@bit 0) => { B0 };
+    (@bit 1) => { B1 };
+    (@bit B0) => { B0 };
+    (@bit B1) => { B1 };
+}
+
+pub use bitstring as bs;
