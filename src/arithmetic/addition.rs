@@ -1,6 +1,7 @@
 use crate::{
     B0, Bit, BitAnd, BitOr, BitXor, Bitstring, Or, Tape,
-    bits::{IfB0, Lazy, Thunk},
+    bits::IfB0,
+    conditionals::bitstring::{Lazy, Thunk},
 };
 
 /// Returns the sum of the two given bitstrings.

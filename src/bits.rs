@@ -1,3 +1,7 @@
+use crate::{
+    conditional::{GlobalBoolean, GlobalFalse, GlobalTrue},
+    conditional_system,
+};
 use std::marker::PhantomData;
 
 /// The single bit `1`.
@@ -35,7 +39,7 @@ pub trait Bit: sealed::SealedBit {
     /// Returns an internal representation of the boolean value arising from this bit. This is used
     /// internally for type-level conditionals, and generally shouldn't be interacted with by
     /// library users.
-    type Bool: byte_conditionals::Boolean;
+    type Bool: GlobalBoolean;
 
     /// The rendered version of this bit, for debugging.
     const RENDER: &'static str;
@@ -47,7 +51,7 @@ impl Bit for B1 {
 
     const UNSIGNED: usize = 1;
 
-    type Bool = byte_conditionals::True;
+    type Bool = GlobalTrue;
 
     const RENDER: &'static str = "1";
 }
@@ -58,14 +62,14 @@ impl Bit for B0 {
 
     const UNSIGNED: usize = 0;
 
-    type Bool = byte_conditionals::False;
+    type Bool = GlobalFalse;
 
     const RENDER: &'static str = "0";
 }
 
 /// A trait for bitstrings of arbitrary length. This is implemented for any [`Bit`] and
 /// [`Tape<H, B>`].
-pub trait Bitstring: byte_conditionals::IsB0 + sealed::SealedBitstring {
+pub trait Bitstring: IsB0 + sealed::SealedBitstring {
     /// The head of the bitstring, which is itself another bitstring.
     type Head: Bitstring;
     /// The least-significant bit of the bitstring.
@@ -109,7 +113,11 @@ impl<H: Bitstring, B: Bit> Bitstring for Tape<H, B> {
 
     // If the trimmed head is zero, then this is the final bit, so we should return just that.
     // Otherwise, return a tape with the trimmed head and this bit. This evaluates recursively.
-    type Trimmed = byte_conditionals::SimpleIf<IsB0<H::Trimmed>, B, Tape<H::Trimmed, B>>;
+    type Trimmed = bitstring_conditionals::SimpleIf<
+        <H::Trimmed as IsB0>::BitstringIsB0,
+        B,
+        Tape<H::Trimmed, B>,
+    >;
 
     // We trim here for uniformity down to single bits
     type And<Other: Bitstring> =
@@ -144,10 +152,6 @@ impl<B: Bit> Bitstring for B {
     }
 }
 
-/// A type alias for our internal conditional booleans depending on whether the input bit is
-/// [`B0`].
-pub type IsB0<B /*: Bytes*/> = <B as byte_conditionals::IsB0>::IsB0;
-
 /// A type alias for our internal conditional, which will evaluate to `T` if the input bit is
 /// [`B0`], and `F` otherwise.
 ///
@@ -155,76 +159,96 @@ pub type IsB0<B /*: Bytes*/> = <B as byte_conditionals::IsB0>::IsB0;
 /// and if you're using this for recursion, your base case should be in a [`Thunk`], and your
 /// recursive case should be a newtype implementing [`Lazy`]. See the implementation of addition in
 /// this crate for an example.
-pub type IfB0<B /*: Bytes*/, T, F> = byte_conditionals::If<IsB0<B>, T, F>;
+pub type IfB0<B /*: Bytes*/, T, F> = bitstring_conditionals::If<<B as IsB0>::BitstringIsB0, T, F>;
 
-pub use byte_conditionals::{Boolean, False, If, Lazy, SimpleIf, Thunk, True};
+conditional_system!(pub bitstring_conditionals, crate::Bitstring);
 
-mod byte_conditionals {
-    use super::*;
-
-    /// A newtype representing truth.
-    pub struct True;
-    /// A newtype representing falsehood.
-    pub struct False;
-
-    mod sealed {
-        pub trait SealedBoolean {}
-        impl SealedBoolean for super::True {}
-        impl SealedBoolean for super::False {}
-    }
-
-    /// A trait for our internal boolean types.
-    pub trait Boolean: sealed::SealedBoolean {
-        /// An associated type for conditionals, where both branches must implement [`Lazy`] in a
-        /// strategy for avoiding immediate evaluation by the compiler.
-        type Select<Then: Lazy, Else: Lazy>: Lazy;
-        /// The negation of this boolean.
-        type Not: Boolean;
-    }
-    impl Boolean for True {
-        type Select<Then: Lazy, Else: Lazy> = Then;
-        type Not = False;
-    }
-    impl Boolean for False {
-        type Select<Then: Lazy, Else: Lazy> = Else;
-        type Not = True;
-    }
-
-    /// A trait for avoiding greedy evaluation of conditional branches at compile-time. This is a
-    /// very specific hack!
-    pub trait Lazy {
-        type Output: Bitstring;
-    }
-
-    /// A simple wrapper type that implements [`Lazy`]. Wrap anything non-recursive in this.
-    pub struct Thunk<T> {
-        _phantom: ::std::marker::PhantomData<T>,
-    }
-    impl<T: Bitstring> Lazy for Thunk<T> {
-        type Output = T;
-    }
-
-    /// A trait for things which we can detect are [`B0`] or not. This lets us detect the end of a
-    /// bitstring, which enables bounded recursion and trimming.
-    pub trait IsB0 {
-        type IsB0: Boolean;
-    }
-    impl<B: Bit> IsB0 for B {
-        // To get this working, we need an associated type on bits that converts to our local
-        // [`Boolean`] type.
-        type IsB0 = <B::Not as Bit>::Bool;
-    }
-    impl<H: Bitstring, B: Bit> IsB0 for Tape<H, B> {
-        type IsB0 = False;
-    }
-
-    /// A type-level conditional, where the condition implements [`Boolean`] and the branches
-    /// implement [`Lazy`].
-    pub type If<Cond, T, F> = <<Cond as Boolean>::Select<T, F> as Lazy>::Output;
-    /// A simple conditional that wraps both its branches in [`Thunk`]s. This should be used when
-    /// you don't have recursion.
-    pub type SimpleIf<Cond, T, F> = If<Cond, Thunk<T>, Thunk<F>>;
+/// A trait for things which we can detect are [`B0`] or not. This lets us detect the end of a
+/// bitstring, which enables bounded recursion and trimming.
+pub trait IsB0 {
+    type BitstringIsB0: bitstring_conditionals::Boolean;
+    #[cfg(feature = "array")]
+    type ArrayIsB0: crate::array::array_conditionals::Boolean;
 }
+impl<B: Bit> IsB0 for B {
+    // To get this working, we need an associated type on bits that converts to our local
+    // [`Boolean`] type.
+    type BitstringIsB0 = <<B::Not as Bit>::Bool as GlobalBoolean>::BitstringBoolean;
+    #[cfg(feature = "array")]
+    type ArrayIsB0 = <<B::Not as Bit>::Bool as GlobalBoolean>::ArrayBoolean;
+}
+impl<H: Bitstring, B: Bit> IsB0 for Tape<H, B> {
+    type BitstringIsB0 = <GlobalFalse as GlobalBoolean>::BitstringBoolean;
+    #[cfg(feature = "array")]
+    type ArrayIsB0 = <GlobalFalse as GlobalBoolean>::ArrayBoolean;
+}
+
+// mod byte_conditionals__ {
+//     use super::*;
+//
+//     /// A newtype representing truth.
+//     pub struct True;
+//     /// A newtype representing falsehood.
+//     pub struct False;
+//
+//     mod sealed {
+//         pub trait SealedBoolean {}
+//         impl SealedBoolean for super::True {}
+//         impl SealedBoolean for super::False {}
+//     }
+//
+//     /// A trait for our internal boolean types.
+//     pub trait Boolean: sealed::SealedBoolean {
+//         /// An associated type for conditionals, where both branches must implement [`Lazy`] in a
+//         /// strategy for avoiding immediate evaluation by the compiler.
+//         type Select<Then: Lazy, Else: Lazy>: Lazy;
+//         /// The negation of this boolean.
+//         type Not: Boolean;
+//     }
+//     impl Boolean for True {
+//         type Select<Then: Lazy, Else: Lazy> = Then;
+//         type Not = False;
+//     }
+//     impl Boolean for False {
+//         type Select<Then: Lazy, Else: Lazy> = Else;
+//         type Not = True;
+//     }
+//
+//     /// A trait for avoiding greedy evaluation of conditional branches at compile-time. This is a
+//     /// very specific hack!
+//     pub trait Lazy {
+//         type Output: Bitstring;
+//     }
+//
+//     /// A simple wrapper type that implements [`Lazy`]. Wrap anything non-recursive in this.
+//     pub struct Thunk<T> {
+//         _phantom: ::std::marker::PhantomData<T>,
+//     }
+//     impl<T: Bitstring> Lazy for Thunk<T> {
+//         type Output = T;
+//     }
+//
+//     /// A trait for things which we can detect are [`B0`] or not. This lets us detect the end of a
+//     /// bitstring, which enables bounded recursion and trimming.
+//     pub trait IsB0 {
+//         type IsB0: Boolean;
+//     }
+//     impl<B: Bit> IsB0 for B {
+//         // To get this working, we need an associated type on bits that converts to our local
+//         // [`Boolean`] type.
+//         type IsB0 = <B::Not as Bit>::Bool;
+//     }
+//     impl<H: Bitstring, B: Bit> IsB0 for Tape<H, B> {
+//         type IsB0 = False;
+//     }
+//
+//     /// A type-level conditional, where the condition implements [`Boolean`] and the branches
+//     /// implement [`Lazy`].
+//     pub type If<Cond, T, F> = <<Cond as Boolean>::Select<T, F> as Lazy>::Output;
+//     /// A simple conditional that wraps both its branches in [`Thunk`]s. This should be used when
+//     /// you don't have recursion.
+//     pub type SimpleIf<Cond, T, F> = If<Cond, Thunk<T>, Thunk<F>>;
+// }
 
 #[test]
 fn bitstrings() {

@@ -1,8 +1,13 @@
 mod arithmetic;
+#[cfg(feature = "array")]
+mod array;
 mod bits;
+mod conditional;
 mod gates;
 
 pub use arithmetic::*;
+#[cfg(feature = "array")]
+pub use array::Array;
 pub use bits::{B0, B1, Bit, Bitstring, Tape};
 pub use gates::*;
 
@@ -14,7 +19,13 @@ pub use gates::*;
 /// inputs/outputs, meaning you need to have a new one for each scenario. A macro may in future
 /// provide this, but for now, this may be useful in bitstring-specific cases.
 pub mod conditionals {
-    pub use crate::bits::{Boolean, False, If, IfB0, IsB0, Lazy, SimpleIf, Thunk, True};
+    pub mod bitstring {
+        pub use crate::bits::bitstring_conditionals::*;
+    }
+    #[cfg(feature = "array")]
+    pub mod array {
+        pub use crate::array::array_conditionals::*;
+    }
 }
 
 /// Convenience macro for constructing tapes of bits. This accepts syntax like `$crate::bitstring!(1, 0, 1)` to
