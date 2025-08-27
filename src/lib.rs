@@ -19,6 +19,7 @@ pub use gates::*;
 /// inputs/outputs, meaning you need to have a new one for each scenario. A macro may in future
 /// provide this, but for now, this may be useful in bitstring-specific cases.
 pub mod conditionals {
+    pub use crate::bits::IsB0;
     pub mod bitstring {
         pub use crate::bits::bitstring_conditionals::*;
     }
