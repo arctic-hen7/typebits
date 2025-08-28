@@ -1,40 +1,40 @@
 /// A global value indicating truth.
-pub struct GlobalTrue;
+pub struct True;
 /// A global value indicating falsehood.
-pub struct GlobalFalse;
+pub struct False;
 
 mod sealed {
     /// A private trait used to make sure the user can't add more booleans.
     pub trait SealedBoolean {}
-    impl SealedBoolean for super::GlobalTrue {}
-    impl SealedBoolean for super::GlobalFalse {}
+    impl SealedBoolean for super::True {}
+    impl SealedBoolean for super::False {}
 }
 
 /// A trait for "global" booleans. These have core boolean logic, and connect to the type-specific
 /// booleans we use for conditionals. Unfortunately, precisely what those downstream booleans are
 /// need to be statically known here, until we have specialisation to convert with fallbacks.
-pub trait GlobalBoolean: sealed::SealedBoolean {
-    type And<Other: GlobalBoolean>: GlobalBoolean;
-    type Or<Other: GlobalBoolean>: GlobalBoolean;
-    type Not: GlobalBoolean;
+pub trait Boolean: sealed::SealedBoolean {
+    type And<Other: Boolean>: Boolean;
+    type Or<Other: Boolean>: Boolean;
+    type Not: Boolean;
 
     type BitstringBoolean: crate::bits::bitstring_conditionals::Boolean;
     #[cfg(feature = "array")]
     type ArrayBoolean: crate::array::array_conditionals::Boolean;
 }
-impl GlobalBoolean for GlobalTrue {
-    type And<Other: GlobalBoolean> = Other;
-    type Or<Other: GlobalBoolean> = GlobalTrue;
-    type Not = GlobalFalse;
+impl Boolean for True {
+    type And<Other: Boolean> = Other;
+    type Or<Other: Boolean> = True;
+    type Not = False;
 
     type BitstringBoolean = crate::bits::bitstring_conditionals::True;
     #[cfg(feature = "array")]
     type ArrayBoolean = crate::array::array_conditionals::True;
 }
-impl GlobalBoolean for GlobalFalse {
-    type And<Other: GlobalBoolean> = GlobalFalse;
-    type Or<Other: GlobalBoolean> = Other;
-    type Not = GlobalTrue;
+impl Boolean for False {
+    type And<Other: Boolean> = False;
+    type Or<Other: Boolean> = Other;
+    type Not = True;
 
     type BitstringBoolean = crate::bits::bitstring_conditionals::False;
     #[cfg(feature = "array")]
@@ -66,17 +66,17 @@ macro_rules! conditional_system {
                 type Select<Then: Lazy, Else: Lazy>: Lazy;
 
                 /// An associated type that takes us *back* to the global boolean types.
-                type GlobalBoolean: $crate::conditional::GlobalBoolean;
+                type GlobalBoolean: $crate::conditional::Boolean;
             }
             impl Boolean for True {
                 type Select<Then: Lazy, Else: Lazy> = Then;
 
-                type GlobalBoolean = $crate::conditional::GlobalTrue;
+                type GlobalBoolean = $crate::conditional::True;
             }
             impl Boolean for False {
                 type Select<Then: Lazy, Else: Lazy> = Else;
 
-                type GlobalBoolean = $crate::conditional::GlobalFalse;
+                type GlobalBoolean = $crate::conditional::False;
             }
 
             /// A trait used as a hack to delay evaluation. This must be unique to each conditional

@@ -9,6 +9,7 @@ pub use arithmetic::*;
 #[cfg(feature = "array")]
 pub use array::Array;
 pub use bits::{B0, B1, Bit, Bitstring, Tape};
+pub use conditional::{Boolean, False, True};
 pub use gates::*;
 
 /// Types related to our internal bitwise conditional system. This is used to implement bitwise

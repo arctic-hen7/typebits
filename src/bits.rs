@@ -1,5 +1,5 @@
 use crate::{
-    conditional::{GlobalBoolean, GlobalFalse, GlobalTrue},
+    conditional::{Boolean, False, True},
     conditional_system,
 };
 use std::marker::PhantomData;
@@ -39,7 +39,7 @@ pub trait Bit: sealed::SealedBit {
     /// Returns an internal representation of the boolean value arising from this bit. This is used
     /// internally for type-level conditionals, and generally shouldn't be interacted with by
     /// library users.
-    type Bool: GlobalBoolean;
+    type Bool: Boolean;
 
     /// The rendered version of this bit, for debugging.
     const RENDER: &'static str;
@@ -51,7 +51,7 @@ impl Bit for B1 {
 
     const UNSIGNED: usize = 1;
 
-    type Bool = GlobalTrue;
+    type Bool = True;
 
     const RENDER: &'static str = "1";
 }
@@ -62,7 +62,7 @@ impl Bit for B0 {
 
     const UNSIGNED: usize = 0;
 
-    type Bool = GlobalFalse;
+    type Bool = False;
 
     const RENDER: &'static str = "0";
 }
@@ -166,21 +166,24 @@ conditional_system!(pub bitstring_conditionals, crate::Bitstring);
 /// A trait for things which we can detect are [`B0`] or not. This lets us detect the end of a
 /// bitstring, which enables bounded recursion and trimming.
 pub trait IsB0 {
+    type GlobalIsB0: crate::conditional::Boolean;
     type BitstringIsB0: bitstring_conditionals::Boolean;
     #[cfg(feature = "array")]
     type ArrayIsB0: crate::array::array_conditionals::Boolean;
 }
 impl<B: Bit> IsB0 for B {
+    type GlobalIsB0 = <B::Not as Bit>::Bool;
     // To get this working, we need an associated type on bits that converts to our local
     // [`Boolean`] type.
-    type BitstringIsB0 = <<B::Not as Bit>::Bool as GlobalBoolean>::BitstringBoolean;
+    type BitstringIsB0 = <<B::Not as Bit>::Bool as Boolean>::BitstringBoolean;
     #[cfg(feature = "array")]
-    type ArrayIsB0 = <<B::Not as Bit>::Bool as GlobalBoolean>::ArrayBoolean;
+    type ArrayIsB0 = <<B::Not as Bit>::Bool as Boolean>::ArrayBoolean;
 }
 impl<H: Bitstring, B: Bit> IsB0 for Tape<H, B> {
-    type BitstringIsB0 = <GlobalFalse as GlobalBoolean>::BitstringBoolean;
+    type GlobalIsB0 = crate::conditional::False;
+    type BitstringIsB0 = <False as Boolean>::BitstringBoolean;
     #[cfg(feature = "array")]
-    type ArrayIsB0 = <GlobalFalse as GlobalBoolean>::ArrayBoolean;
+    type ArrayIsB0 = <False as Boolean>::ArrayBoolean;
 }
 
 #[test]

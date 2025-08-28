@@ -1,5 +1,8 @@
 use crate::{Bitstring, bits::IsB0, conditional_system};
-use std::mem::{ManuallyDrop, MaybeUninit};
+use std::{
+    mem::{ManuallyDrop, MaybeUninit},
+    ops::{Index, IndexMut},
+};
 
 /// A stack-allocated array storing instances of `T`, whose length is defined by the [`Bitstring`]
 /// `B`. This is almost identical to `generic_array`, except it avoids any `where` clauses, and
@@ -179,6 +182,18 @@ impl<T: Default, N: Bitstring> Default for Array<T, N> {
         unsafe { const_transmute::<_, Self>(uninit) }
     }
 }
+impl<T, N: Bitstring> Index<usize> for Array<T, N> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.as_slice()[index]
+    }
+}
+impl<T, N: Bitstring> IndexMut<usize> for Array<T, N> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.as_mut_slice()[index]
+    }
+}
 impl<T, N: Bitstring> AsRef<[T]> for Array<T, N> {
     fn as_ref(&self) -> &[T] {
         self.as_slice()
@@ -187,6 +202,45 @@ impl<T, N: Bitstring> AsRef<[T]> for Array<T, N> {
 impl<T, N: Bitstring> AsMut<[T]> for Array<T, N> {
     fn as_mut(&mut self) -> &mut [T] {
         self.as_mut_slice()
+    }
+}
+impl<T: Clone, N: Bitstring> Clone for Array<T, N> {
+    fn clone(&self) -> Self {
+        let mut uninit = Self::uninit();
+        for (src, dst) in self.as_slice().iter().zip(uninit.as_mut_slice().iter_mut()) {
+            dst.write(src.clone());
+        }
+
+        // SAFETY: We've initialised all elements
+        unsafe { uninit.assume_init() }
+    }
+}
+impl<T: Clone, N: Bitstring> Array<T, N> {
+    pub fn try_new_from_slice(slice: &[T]) -> Result<Self, BadLength> {
+        if slice.len() != N::UNSIGNED {
+            return Err(BadLength {
+                found: slice.len(),
+                expected: N::UNSIGNED,
+            });
+        }
+
+        let mut uninit = Self::uninit();
+        for i in 0..N::UNSIGNED {
+            uninit[i].write(slice[i].clone());
+        }
+
+        Ok(unsafe { uninit.assume_init() })
+    }
+
+    pub fn new_from_slice(slice: &[T]) -> Self {
+        if slice.len() != N::UNSIGNED {
+            panic!("tried to construct array from slice of incorrect length");
+        }
+
+        match Self::try_new_from_slice(slice) {
+            Ok(s) => s,
+            Err(_) => unreachable!(),
+        }
     }
 }
 
