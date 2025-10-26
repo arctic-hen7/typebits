@@ -171,6 +171,10 @@ impl<T, N: Bitstring> Array<MaybeUninit<T>, N> {
     ///
     /// All elements must actually be initialized, or this will lead to undefined behaviour due to
     /// the underlying transmutation.
+    ///
+    /// # Boxes
+    ///
+    /// If you're trying to interpret a `Box<Array<MaybeUninit<T>, N>>`, you'll need
     pub const unsafe fn assume_init(self) -> Array<T, N> {
         // SAFETY: There's no difference between `MaybeUninit<T>` and `T` in memory (literally a
         // union with `()`), so perfectly safe to reinterpret the array as a whole
@@ -282,7 +286,9 @@ impl<T: Clone, N: Bitstring> Array<T, N> {
             uninit[i].write(slice[i].clone());
         }
 
-        Ok(unsafe { Box::new_uninit().assume_init() })
+        // SAFETY: There's no difference between `MaybeUninit<T>` and `T` in memory (literally a
+        // union with `()`), so perfectly safe to reinterpret the array as a whole
+        Ok(unsafe { const_transmute::<_, _>(uninit) })
     }
 
     pub fn new_boxed_from_slice(slice: &[T]) -> Box<Self> {
