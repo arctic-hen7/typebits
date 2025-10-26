@@ -18,6 +18,8 @@ pub trait Boolean: sealed::SealedBoolean {
     type Or<Other: Boolean>: Boolean;
     type Not: Boolean;
 
+    const BOOL: bool;
+
     type BitstringBoolean: crate::bits::bitstring_conditionals::Boolean;
     #[cfg(feature = "array")]
     type ArrayBoolean: crate::array::array_conditionals::Boolean;
@@ -27,6 +29,8 @@ impl Boolean for True {
     type Or<Other: Boolean> = True;
     type Not = False;
 
+    const BOOL: bool = true;
+
     type BitstringBoolean = crate::bits::bitstring_conditionals::True;
     #[cfg(feature = "array")]
     type ArrayBoolean = crate::array::array_conditionals::True;
@@ -35,6 +39,8 @@ impl Boolean for False {
     type And<Other: Boolean> = False;
     type Or<Other: Boolean> = Other;
     type Not = True;
+
+    const BOOL: bool = false;
 
     type BitstringBoolean = crate::bits::bitstring_conditionals::False;
     #[cfg(feature = "array")]
