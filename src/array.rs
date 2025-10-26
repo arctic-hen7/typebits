@@ -64,6 +64,13 @@ impl<T, N: Bitstring> Array<T, N> {
         unsafe { MaybeUninit::<Array<MaybeUninit<T>, N>>::uninit().assume_init() }
     }
 
+    /// Creates a new boxed [`Array<T, N>`] of uninitialised elements. You should use this when the
+    /// length `N` is likely to overflow the stack.
+    pub fn uninit_boxed() -> Box<Array<MaybeUninit<T>, N>> {
+        // SAFETY: An uninitialized `[MaybeUninit<_>; N]` is valid, same as a regular array.
+        unsafe { Box::new_uninit().assume_init() }
+    }
+
     /// Gets the contents of this [`Array<T, N>`] as a slice. Because we have the same underlying
     /// memory representation as a slice, this works. The returned slice is guaranteed to have
     /// length [`Self::len()`] (equivalently [`N::UNSIGNED`]).
@@ -152,7 +159,7 @@ impl<T, N: Bitstring> Array<T, N> {
         }
     }
 
-    /// Returns the length of thise [`Array<T, N>`], which is equal to [`N::UNSIGNED`].
+    /// Returns the length of this [`Array<T, N>`], which is equal to [`N::UNSIGNED`].
     pub const fn len() -> usize {
         N::UNSIGNED
     }
@@ -238,6 +245,33 @@ impl<T: Clone, N: Bitstring> Array<T, N> {
         }
 
         match Self::try_new_from_slice(slice) {
+            Ok(s) => s,
+            Err(_) => unreachable!(),
+        }
+    }
+
+    pub fn try_new_boxed_from_slice(slice: &[T]) -> Result<Box<Self>, BadLength> {
+        if slice.len() != N::UNSIGNED {
+            return Err(BadLength {
+                found: slice.len(),
+                expected: N::UNSIGNED,
+            });
+        }
+
+        let mut uninit = Self::uninit_boxed();
+        for i in 0..N::UNSIGNED {
+            uninit[i].write(slice[i].clone());
+        }
+
+        Ok(unsafe { Box::new_uninit().assume_init() })
+    }
+
+    pub fn new_boxed_from_slice(slice: &[T]) -> Box<Self> {
+        if slice.len() != N::UNSIGNED {
+            panic!("tried to construct array from slice of incorrect length");
+        }
+
+        match Self::try_new_boxed_from_slice(slice) {
             Ok(s) => s,
             Err(_) => unreachable!(),
         }
