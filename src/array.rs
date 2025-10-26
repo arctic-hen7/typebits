@@ -177,8 +177,9 @@ impl<T, N: Bitstring> Array<MaybeUninit<T>, N> {
         unsafe { const_transmute::<_, _>(self) }
     }
 }
-impl<T: Default, N: Bitstring> Default for Array<T, N> {
-    fn default() -> Self {
+impl<T: Default, N: Bitstring> Array<T, N> {
+    /// Creates a new [`Array<T, N>`] with all elements set to `T::default()`.
+    pub fn new() -> Self {
         let mut uninit = Self::uninit();
         for elem in uninit.as_mut_slice() {
             elem.write(T::default());
@@ -187,6 +188,24 @@ impl<T: Default, N: Bitstring> Default for Array<T, N> {
         // SAFETY: There's no difference between `MaybeUninit<T>` and `T` in memory (literally a
         // union with `()`), so perfectly safe to reinterpret the array as a whole
         unsafe { const_transmute::<_, Self>(uninit) }
+    }
+
+    /// Creates a new boxed [`Array<T, N>`] with all elements set to `T::default()`. You should use
+    /// this when the length `N` is likely to overflow the stack.
+    pub fn new_boxed() -> Box<Self> {
+        let mut uninit = Self::uninit_boxed();
+        for elem in uninit.as_mut_slice() {
+            elem.write(T::default());
+        }
+
+        // SAFETY: There's no difference between `MaybeUninit<T>` and `T` in memory (literally a
+        // union with `()`), so perfectly safe to reinterpret the array as a whole
+        unsafe { const_transmute::<_, Box<Self>>(uninit) }
+    }
+}
+impl<T: Default, N: Bitstring> Default for Array<T, N> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 impl<T, N: Bitstring> Index<usize> for Array<T, N> {
