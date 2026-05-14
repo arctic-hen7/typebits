@@ -1,5 +1,7 @@
 use crate::{Bitstring, bits::IsB0, conditional_system};
-use std::{
+#[cfg(feature = "alloc")]
+use alloc::boxed::Box;
+use core::{
     mem::{ManuallyDrop, MaybeUninit},
     ops::{Index, IndexMut},
 };
@@ -66,6 +68,7 @@ impl<T, N: Bitstring> Array<T, N> {
 
     /// Creates a new boxed [`Array<T, N>`] of uninitialised elements. You should use this when the
     /// length `N` is likely to overflow the stack.
+    #[cfg(feature = "alloc")]
     pub fn uninit_boxed() -> Box<Array<MaybeUninit<T>, N>> {
         // SAFETY: An uninitialized `[MaybeUninit<_>; N]` is valid, same as a regular array.
         unsafe { Box::new_uninit().assume_init() }
@@ -81,7 +84,7 @@ impl<T, N: Bitstring> Array<T, N> {
         let ptr = self as *const Self as *const T;
 
         // SAFETY: We have something in memory that is exactly equivalent to a `[u8; N::UNSIGNED]`.
-        unsafe { std::slice::from_raw_parts(ptr, slice_size) }
+        unsafe { core::slice::from_raw_parts(ptr, slice_size) }
     }
 
     /// Gets the contents of this [`Array<T, N>`] as a mutable slice.
@@ -92,7 +95,7 @@ impl<T, N: Bitstring> Array<T, N> {
         let ptr = self as *mut Self as *mut T;
 
         // SAFETY: We have something in memory that is exactly equivalent to a `[u8; N::UNSIGNED]`.
-        unsafe { std::slice::from_raw_parts_mut(ptr, slice_size) }
+        unsafe { core::slice::from_raw_parts_mut(ptr, slice_size) }
     }
 
     /// Tries to construct an [`Array<T, N>`] from the given slice. This returns a reference, as
@@ -196,6 +199,7 @@ impl<T: Default, N: Bitstring> Array<T, N> {
 
     /// Creates a new boxed [`Array<T, N>`] with all elements set to `T::default()`. You should use
     /// this when the length `N` is likely to overflow the stack.
+    #[cfg(feature = "alloc")]
     pub fn new_boxed() -> Box<Self> {
         let mut uninit = Self::uninit_boxed();
         for elem in uninit.as_mut_slice() {
@@ -273,6 +277,7 @@ impl<T: Clone, N: Bitstring> Array<T, N> {
         }
     }
 
+    #[cfg(feature = "alloc")]
     pub fn try_new_boxed_from_slice(slice: &[T]) -> Result<Box<Self>, BadLength> {
         if slice.len() != N::UNSIGNED {
             return Err(BadLength {
@@ -291,6 +296,7 @@ impl<T: Clone, N: Bitstring> Array<T, N> {
         Ok(unsafe { const_transmute::<_, _>(uninit) })
     }
 
+    #[cfg(feature = "alloc")]
     pub fn new_boxed_from_slice(slice: &[T]) -> Box<Self> {
         if slice.len() != N::UNSIGNED {
             panic!("tried to construct array from slice of incorrect length");
@@ -311,7 +317,7 @@ impl<T: Clone, N: Bitstring> Array<T, N> {
 /// See [`std::mem::transmute`], but in general, the bits you provide must be valid in both `A` and
 /// `B`.
 const unsafe fn const_transmute<A, B>(a: A) -> B {
-    if std::mem::size_of::<A>() != std::mem::size_of::<B>() {
+    if core::mem::size_of::<A>() != core::mem::size_of::<B>() {
         panic!("size mismatch in const transmute");
     }
 
@@ -356,7 +362,7 @@ pub struct BadLength {
 pub struct ArrayEven<T, U: sealed::IsArrayImpl> {
     left: U,
     right: U,
-    _phantom: ::std::marker::PhantomData<T>,
+    _phantom: ::core::marker::PhantomData<T>,
 }
 
 /// An internal struct that represents the odd side of an array.
@@ -399,7 +405,7 @@ impl<B: Bitstring> HasArray for B {
 
 /// An internal recursion helper for producing [`Array<T, N>`].
 pub struct ArrayRecurse<T, B: Bitstring> {
-    _phantom: ::std::marker::PhantomData<(T, B)>,
+    _phantom: ::core::marker::PhantomData<(T, B)>,
 }
 impl<T, B: Bitstring> Lazy for ArrayRecurse<T, B> {
     // If the least significant bit is `B0` (i.e. the bitstring represents an even number), go into
@@ -409,7 +415,7 @@ impl<T, B: Bitstring> Lazy for ArrayRecurse<T, B> {
 
 /// An internal recursion helper for producing [`Array<T, N>`] (even variant).
 pub struct ArrayEvenRecurse<T, B: Bitstring> {
-    _phantom: ::std::marker::PhantomData<(T, B)>,
+    _phantom: ::core::marker::PhantomData<(T, B)>,
 }
 impl<T, B: Bitstring> Lazy for ArrayEvenRecurse<T, B> {
     // We're an even bitstring, divide by two (i.e. take the head) and put whatever the array type
@@ -419,7 +425,7 @@ impl<T, B: Bitstring> Lazy for ArrayEvenRecurse<T, B> {
 
 /// An internal recursion helper for producing [`Array<T, N>`] (odd variant).
 pub struct ArrayOddRecurse<T, B: Bitstring> {
-    _phantom: ::std::marker::PhantomData<(T, B)>,
+    _phantom: ::core::marker::PhantomData<(T, B)>,
 }
 impl<T, B: Bitstring> Lazy for ArrayOddRecurse<T, B> {
     // We're an odd bitstring, divide by two (i.e. take the head) and put whatever the array type

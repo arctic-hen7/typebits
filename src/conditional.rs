@@ -96,7 +96,7 @@ macro_rules! conditional_system {
             /// A simple wrapper that implements [`Lazy`] for whatever you put in it. Anything that
             /// doesn't need to be recursive should go in this.
             pub struct Thunk<T> {
-                _phantom: ::std::marker::PhantomData<T>,
+                _phantom: ::core::marker::PhantomData<T>,
             }
             impl<T $( : $($data_bounds)+ )?> Lazy for Thunk<T> {
                 type Output = T;

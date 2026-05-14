@@ -41,7 +41,7 @@ impl<B: Bitstring> Add for B {
 /// as an end user, but the source code is a useful example for implementing recursive type-level
 /// conditionals.
 pub struct AddRecurse<A: Bitstring, B: Bitstring, CarryIn: Bit> {
-    _phantom: ::std::marker::PhantomData<(A, B, CarryIn)>,
+    _phantom: ::core::marker::PhantomData<(A, B, CarryIn)>,
 }
 impl<A: Bitstring, B: Bitstring, CarryIn: Bit> Lazy for AddRecurse<A, B, CarryIn> {
     type Output =
@@ -62,6 +62,7 @@ impl<B: Bit> HalfAdd for B {
         BitOr<BitAnd<Self, Rhs>, BitAnd<BitXor<Self, Rhs>, CarryIn>>; // (A AND B) OR ((A XOR B) AND C_in)
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn add() {
     use crate::B1;

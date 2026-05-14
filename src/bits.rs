@@ -2,7 +2,7 @@ use crate::{
     conditional::{Boolean, False, True},
     conditional_system,
 };
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 /// The single bit `1`.
 #[derive(Default)]
@@ -88,6 +88,7 @@ pub trait Bitstring: IsB0 + sealed::SealedBitstring {
     type Not: Bitstring;
 
     /// Returns a string representation of this bitstring, for debugging.
+    #[cfg(feature = "std")]
     fn render() -> String;
 }
 
@@ -126,6 +127,7 @@ impl<H: Bitstring, B: Bit> Bitstring for Tape<H, B> {
     type Not = <Tape<H::Not, B::Not> as Bitstring>::Trimmed;
 
     // TODO: Compile-time or const way of doing this?
+    #[cfg(feature = "std")]
     fn render() -> String {
         format!("{}{}", H::render(), B::render())
     }
@@ -147,6 +149,7 @@ impl<B: Bit> Bitstring for B {
     type Or<Other: Bitstring> = <Tape<Other::Head, B::Or<Other::Lsb>> as Bitstring>::Trimmed;
     type Not = B::Not;
 
+    #[cfg(feature = "std")]
     fn render() -> String {
         B::RENDER.to_string()
     }
@@ -186,6 +189,7 @@ impl<H: Bitstring, B: Bit> IsB0 for Tape<H, B> {
     type ArrayIsB0 = <False as Boolean>::ArrayBoolean;
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn bitstrings() {
     use crate::gates::*;

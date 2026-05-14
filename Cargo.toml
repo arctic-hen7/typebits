@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-thiserror = { version = "1", optional = true }
+thiserror = { version = "2", default-features = false, optional = true }
 
 [features]
-default = [ "array" ]
+default = [ "std", "array" ]
 
+std = [ "alloc", "thiserror/std" ]
+alloc = []
 array = [ "thiserror" ]

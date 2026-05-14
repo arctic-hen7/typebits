@@ -51,7 +51,7 @@ impl<B: Bitstring> Subtract for B {
 /// An internal recursion type for subtracting two bitstrings. You shouldn't need to interact with
 /// this as an end user.
 pub struct SubtractRecurse<A: Bitstring, B: Bitstring, BorrowIn: Bit> {
-    _phantom: ::std::marker::PhantomData<(A, B, BorrowIn)>,
+    _phantom: ::core::marker::PhantomData<(A, B, BorrowIn)>,
 }
 impl<A: Bitstring, B: Bitstring, BorrowIn: Bit> Lazy for SubtractRecurse<A, B, BorrowIn> {
     type Output = <A::Head as Subtract>::DifferenceWithBorrow<
@@ -75,6 +75,7 @@ impl<B: Bit> HalfSubtract for B {
         BitOr<BitAnd<BitNot<Self>, Rhs>, BitAnd<BitNot<BitXor<Self, Rhs>>, BorrowIn>>; // ((NOT A) AND B) OR ((NOT (A XOR B)) AND B_in)
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn subtract() {
     use crate::B1;
