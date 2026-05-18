@@ -88,8 +88,8 @@ pub trait Bitstring: IsB0 + sealed::SealedBitstring {
     type Not: Bitstring;
 
     /// Returns a string representation of this bitstring, for debugging.
-    #[cfg(feature = "std")]
-    fn render() -> String;
+    #[cfg(feature = "alloc")]
+    fn render() -> alloc::string::String;
 }
 
 /// A "tape" of bits, represented as a recursive container. The generic parameter `H` is the "head"
@@ -127,9 +127,9 @@ impl<H: Bitstring, B: Bit> Bitstring for Tape<H, B> {
     type Not = <Tape<H::Not, B::Not> as Bitstring>::Trimmed;
 
     // TODO: Compile-time or const way of doing this?
-    #[cfg(feature = "std")]
-    fn render() -> String {
-        format!("{}{}", H::render(), B::render())
+    #[cfg(feature = "alloc")]
+    fn render() -> alloc::string::String {
+        alloc::format!("{}{}", H::render(), B::render())
     }
 }
 impl<B: Bit> Bitstring for B {
@@ -149,8 +149,10 @@ impl<B: Bit> Bitstring for B {
     type Or<Other: Bitstring> = <Tape<Other::Head, B::Or<Other::Lsb>> as Bitstring>::Trimmed;
     type Not = B::Not;
 
-    #[cfg(feature = "std")]
-    fn render() -> String {
+    #[cfg(feature = "alloc")]
+    fn render() -> alloc::string::String {
+        use alloc::string::ToString;
+
         B::RENDER.to_string()
     }
 }
@@ -189,7 +191,7 @@ impl<H: Bitstring, B: Bit> IsB0 for Tape<H, B> {
     type ArrayIsB0 = <False as Boolean>::ArrayBoolean;
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 #[test]
 fn bitstrings() {
     use crate::gates::*;
