@@ -1,6 +1,8 @@
 /// A global value indicating truth.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct True;
 /// A global value indicating falsehood.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct False;
 
 mod sealed {
