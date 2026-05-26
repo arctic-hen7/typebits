@@ -3,7 +3,7 @@ use crate::{Bitstring, bits::IsB0, conditional_system};
 use alloc::boxed::Box;
 use core::{
     mem::{ManuallyDrop, MaybeUninit},
-    ops::{Index, IndexMut},
+    ops::{Deref, DerefMut, Index, IndexMut},
 };
 
 /// A stack-allocated array storing instances of `T`, whose length is defined by the [`Bitstring`]
@@ -236,6 +236,26 @@ impl<T, N: Bitstring> AsRef<[T]> for Array<T, N> {
 impl<T, N: Bitstring> AsMut<[T]> for Array<T, N> {
     fn as_mut(&mut self) -> &mut [T] {
         self.as_mut_slice()
+    }
+}
+impl<T, N: Bitstring> Deref for Array<T, N> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
+    }
+}
+impl<T, N: Bitstring> DerefMut for Array<T, N> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_mut_slice()
+    }
+}
+#[cfg(feature = "zeroize")]
+impl<T: zeroize::Zeroize, N: Bitstring> zeroize::Zeroize for Array<T, N> {
+    fn zeroize(&mut self) {
+        // No point in propagating bounds through internal types when it's a runtime operation
+        // anyway
+        self.iter_mut().for_each(|elem| elem.zeroize());
     }
 }
 impl<T: Clone, N: Bitstring> Clone for Array<T, N> {

@@ -5,10 +5,12 @@ edition = "2024"
 
 [dependencies]
 thiserror = { version = "2", default-features = false, optional = true }
+zeroize = { version = "1.8.2", default-features = false, features = [ "zeroize_derive" ], optional = true }
 
 [features]
 default = [ "std", "array" ]
 
-std = [ "alloc", "thiserror/std" ]
-alloc = []
+std = [ "alloc", "thiserror/std", "zeroize?/std" ]
+alloc = [ "zeroize?/alloc" ]
 array = [ "thiserror" ]
+zeroize = [ "dep:zeroize" ]
